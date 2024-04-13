@@ -1,0 +1,1 @@
+print("OmegaHack 2024 - 1st Place Winner: El Atraco")
