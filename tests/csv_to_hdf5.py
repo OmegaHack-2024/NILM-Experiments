@@ -1,45 +1,39 @@
 import pandas as pd
-from nilmtk import DataSet
 from nilmtk.utils import save_yaml_to_datastore
+from nilmtk.datastore import Key
 from nilmtk.measurement import LEVEL_NAMES
+from nilm_metadata import convert_yaml_to_hdf5
 
-def csv_to_hdf5(csv_file, hdf5_file):
-    # Load your CSV data
-    data = pd.read_csv(csv_file, index_col='Fecha', parse_dates=True)
-    # 'Fecha' should be your datetime column, ensure this column is in datetime format
+# Step 1: Load CSV into a pandas DataFrame
+df = pd.read_csv('app/datasets/consumo_casa.csv', parse_dates=True, index_col='Fecha')
 
-    # Define the metadata for NILMTK compatibility
-    metadata = {
-        'appliances': [{'type': 'Refrigerator', 'instance': 1},
-                       {'type': 'Clothes Washer', 'instance': 1},
-                       {'type': 'Clothes Iron', 'instance': 1},
-                       {'type': 'Computer', 'instance': 1},
-                       {'type': 'Oven', 'instance': 1},
-                       {'type': 'Play', 'instance': 1},
-                       {'type': 'TV', 'instance': 1},
-                       {'type': 'Sound System', 'instance': 1}],
-        'name': 'home',
-        'timezone': 'Europe/London',  # Change this to your local timezone
-        'meter_devices': {
-            'my_meter': {
-                'model': 'NILMTK Custom',
-                'sample_period': 60  # This assumes data is sampled every minute
-            }
-        }
-    }
+# Step 2: Prepare the output HDF5 file path
+output_filename = 'app/datasets/consumo_casa.h5'
 
-    # Reformat the DataFrame to fit NILMTK's expected MultiIndex format
-    data.columns = pd.MultiIndex.from_product([['power'], ['active'], data.columns],
-                                              names=LEVEL_NAMES)
-    
-    # Save to HDF5 using NILMTK's utility function
-    save_yaml_to_datastore(metadata, data, hdf5_file)
+# Step 3: Create metadata
+# This is an example of metadata. You should tailor this to fit your dataset.
+metadata = {
+    'name': 'consumo_casa',
+    'meter_devices': {
+        'mains': {'model': 'iAWE', 'sample_period': 60},
+        'submeters': {'model': 'iAWE', 'sample_period': 60}
+    },
+    'appliances': [
+        {'type': 'fridge', 'instance': 1},
+        {'type': 'washing machine', 'instance': 1},
+        {'type': 'dish washer', 'instance': 1},
+        # Add all other appliances
+    ],
+    'timezone': 'Europe/London', # Change as per your dataset
+}
 
-# Convert your CSV to HDF5
-csv_file = '/mnt/data/consumo_casa.csv'
-hdf5_file = '/mnt/data/consumo_casa.h5'
-csv_to_hdf5(csv_file, hdf5_file)
+# Step 4: Prepare DataFrame for saving to HDF5
+df.columns = pd.MultiIndex.from_tuples([("power", "active", col) if col != 'Medidor [W]' else ("power", "apparent", "mains") for col in df.columns], names=LEVEL_NAMES)
 
-# Load the dataset using NILMTK
-dataset = DataSet(hdf5_file)
-print("Dataset loaded:", dataset.buildings)
+# Step 5: Save to HDF5
+save_yaml_to_datastore(metadata, df, output_filename, format='HDF')
+
+# Now you have an HDF5 file that can be loaded by NILMTK
+dataset = DataSet(output_filename)
+elec = dataset.buildings[1].elec
+elec.plot()
