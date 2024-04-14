@@ -6,9 +6,9 @@ from nilm_metadata import convert_yaml_to_hdf5
 from nilmtk.utils import get_datastore
 
 # Your CSV file
-csv_filename = '/mnt/data/consumo_casa.csv'
+csv_filename = 'consumo_casa.csv'
 # HDF5 file to create
-hdf_filename = '/mnt/data/consumo_casa.h5'
+hdf_filename = 'consumo_casa.h5'
 
 # Load CSV into a pandas DataFrame
 df = pd.read_csv(csv_filename, parse_dates=True, index_col='Fecha')
